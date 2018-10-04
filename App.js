@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, Button } from 'react-native';
+import { StyleSheet, Text, View, Button, ActivityIndicator, FlatList } from 'react-native';
 import { createStackNavigator } from 'react-navigation';
 
 class HomeScreen extends React.Component {
@@ -23,15 +23,17 @@ class MatchesScreen extends React.Component {
   }
 
   componentDidMount(){
-    return fetch('http://api.football-data.org/v2/teams/86/matches'
-      headers: {
-        'X-Auth-Token': '2b235ab73c8a4a8b9cbc541da8ab5191'
+    return fetch('http://api.football-data.org/v2/competitions/2014/matches',
+      {
+        headers: {
+          'X-Auth-Token': '2b235ab73c8a4a8b9cbc541da8ab5191'
+        }
       })
       .then((response) => response.json())
       .then((responseJson) => {
         this.setState({
           isLoading: false,
-          spaMatches: responseJson.matches,
+          matchesData: responseJson,
         }, function(){
 
         });
@@ -53,7 +55,16 @@ class MatchesScreen extends React.Component {
 
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <Text>Matches Screen</Text>
+        <Text>{this.state.matchesData.competition.name}</Text>
+        <FlatList
+          data={this.state.matchesData.matches}
+          renderItem={({item}) =>
+            <View>
+              <Text>{item.homeTeam.name} {item.score.fullTime.homeTeam != null ? (item.score.fullTime.homeTeam) : (<Text>?</Text>)} - {item.score.fullTime.awayTeam != null ? (item.score.fullTime.awayTeam) : (<Text>?</Text>)} {item.awayTeam.name}</Text>
+            </View>
+          }
+          keyExtractor={(item, index) => 'match_'+item.id}
+        />
         <Button
           title="Calculate"
           onPress={() => this.props.navigation.navigate('CalculatedTable')}
