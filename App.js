@@ -20,8 +20,55 @@ class MatchesScreen extends React.Component {
   constructor(props){
     super(props);
     this.state = {
-      isMatchesLoading: true
+      teams: [],
+      isMatchesLoading: true,
+      isStandingsLoading: true
     }
+  }
+
+  getStandings() {
+    return fetch('http://api.football-data.org/v2/competitions/2014/standings',
+    {
+      headers: {
+        'X-Auth-Token': '2b235ab73c8a4a8b9cbc541da8ab5191'
+      }
+    })
+    .then((response) => response.json())
+    .then((responseJson) => {
+      var teams = [];
+      for(var i=0; i<responseJson.standings.length; i++) {
+        if(responseJson.standings[i].type == 'TOTAL') {
+          for(var j=0; j<responseJson.standings[i].table.length; j++) {
+            teams.push({
+              position: responseJson.standings[i].table[j].position,
+              team: {
+                id: responseJson.standings[i].table[j].team.id,
+                name: responseJson.standings[i].table[j].team.name,
+                crest: responseJson.standings[i].table[j].team.crestUrl
+              },
+              played: responseJson.standings[i].table[j].playedGames,
+              won: responseJson.standings[i].table[j].won,
+              draw: responseJson.standings[i].table[j].draw,
+              lost: responseJson.standings[i].table[j].lost,
+              points: responseJson.standings[i].table[j].points,
+              goalsFor: responseJson.standings[i].table[j].goalsFor,
+              goalsAgainst: responseJson.standings[i].table[j].goalsAgainst,
+              goalsDiff: responseJson.standings[i].table[j].goalDifference
+            });
+          }
+        }
+      }
+      this.setState({
+        isStandingsLoading: false,
+        standingsData: responseJson,
+        teams: teams,
+      }, function(){
+
+      });
+    })
+    .catch((error) =>{
+      console.error(error);
+    });
   }
 
   getMatches() {
@@ -39,7 +86,6 @@ class MatchesScreen extends React.Component {
       }, function(){
 
       });
-
     })
     .catch((error) =>{
       console.error(error);
@@ -47,11 +93,12 @@ class MatchesScreen extends React.Component {
   }
 
   componentDidMount(){
+    this.getStandings();
     this.getMatches();
   }
 
   render() {
-    if(this.state.isMatchesLoading){
+    if(this.state.isMatchesLoading || this.state.isStandingsLoading){
       return(
         <View style={{flex: 1, padding: 20}}>
           <ActivityIndicator/>
@@ -61,7 +108,6 @@ class MatchesScreen extends React.Component {
 
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <Text>{this.state.matchesData.competition.name}</Text>
         <FlatList
           data={this.state.matchesData.matches}
           renderItem={({item}) =>
@@ -89,50 +135,12 @@ class MatchesScreen extends React.Component {
 class CalculatedTableScreen extends React.Component {
   constructor(props){
     super(props);
-    this.state = {
-      isStandingsLoading: true
-    }
-  }
-
-  getStandings() {
-    return fetch('http://api.football-data.org/v2/competitions/2014/standings',
-    {
-      headers: {
-        'X-Auth-Token': '2b235ab73c8a4a8b9cbc541da8ab5191'
-      }
-    })
-    .then((response) => response.json())
-    .then((responseJson) => {
-      this.setState({
-        isStandingsLoading: false,
-        standingsData: responseJson,
-      }, function(){
-
-      });
-
-    })
-    .catch((error) =>{
-      console.error(error);
-    });
-  }
-
-  componentDidMount(){
-    this.getStandings();
   }
 
   render() {
-    if(this.state.isStandingsLoading){
-      return(
-        <View style={{flex: 1, padding: 20}}>
-          <ActivityIndicator/>
-        </View>
-      )
-    }
-
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <Text>Calculated Table Screen</Text>
-        <Text>{this.state.standingsData.standings[0].type}</Text>
       </View>
     );
   }
