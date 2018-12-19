@@ -41,11 +41,9 @@ class MatchesScreen extends React.Component {
           for(var j=0; j<responseJson.standings[i].table.length; j++) {
             teams.push({
               position: responseJson.standings[i].table[j].position,
-              team: {
-                id: responseJson.standings[i].table[j].team.id,
-                name: responseJson.standings[i].table[j].team.name,
-                crest: responseJson.standings[i].table[j].team.crestUrl
-              },
+              id: responseJson.standings[i].table[j].team.id,
+              name: responseJson.standings[i].table[j].team.name,
+              crest: responseJson.standings[i].table[j].team.crestUrl,
               played: responseJson.standings[i].table[j].playedGames,
               won: responseJson.standings[i].table[j].won,
               draw: responseJson.standings[i].table[j].draw,
