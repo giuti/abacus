@@ -123,7 +123,7 @@ class MatchesScreen extends React.Component {
         />
         <Button
           title="Calculate"
-          onPress={() => this.props.navigation.navigate('CalculatedTable')}
+          onPress={() => this.props.navigation.navigate('CalculatedTable', {teams: this.state.teams})}
         />
       </View>
     );
@@ -133,12 +133,46 @@ class MatchesScreen extends React.Component {
 class CalculatedTableScreen extends React.Component {
   constructor(props){
     super(props);
+    this.state = {
+      teams: this.props.navigation.getParam('teams', []),
+      orderedTeams: []
+    }
+  }
+
+  compare(a, b) {
+    return b.points - a.points
+  }
+
+  sortTable() {
+    var teams = this.state.teams
+    var orderedTeams = teams.sort(this.compare)
+    console.log(orderedTeams);
+    this.setState({
+      orderedTeams: orderedTeams
+    }, function(){
+
+    });
+  }
+
+  componentDidMount(){
+    this.sortTable();
   }
 
   render() {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <Text>Calculated Table Screen</Text>
+        <FlatList
+          data={this.state.teams}
+          renderItem={({item}) =>
+            <View style={{flexDirection: 'row', alignItems: 'center'}}>
+              <Text>
+                {item.name}
+              </Text>
+            </View>
+          }
+          keyExtractor={(item, index) => 'team_'+item.id}
+        />
       </View>
     );
   }
