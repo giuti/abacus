@@ -146,7 +146,6 @@ class CalculatedTableScreen extends React.Component {
   sortTable() {
     var teams = this.state.teams
     var orderedTeams = teams.sort(this.compare)
-    console.log(orderedTeams);
     this.setState({
       orderedTeams: orderedTeams
     }, function(){
