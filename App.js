@@ -26,68 +26,71 @@ class MatchesScreen extends React.Component {
     }
   }
 
-  getStandings() {
-    return fetch('http://api.football-data.org/v2/competitions/2014/standings',
-    {
-      headers: {
-        'X-Auth-Token': '2b235ab73c8a4a8b9cbc541da8ab5191'
-      }
-    })
-    .then((response) => response.json())
-    .then((responseJson) => {
+  async getStandings() {
+    try {
+      const response = await fetch('https://abacus-api.herokuapp.com/api/teams/');
+      const responseJson = await response.json();
       var teams = [];
-      for(var i=0; i<responseJson.standings.length; i++) {
-        if(responseJson.standings[i].type == 'TOTAL') {
-          for(var j=0; j<responseJson.standings[i].table.length; j++) {
-            teams.push({
-              position: responseJson.standings[i].table[j].position,
-              id: responseJson.standings[i].table[j].team.id,
-              name: responseJson.standings[i].table[j].team.name,
-              crest: responseJson.standings[i].table[j].team.crestUrl,
-              played: responseJson.standings[i].table[j].playedGames,
-              won: responseJson.standings[i].table[j].won,
-              draw: responseJson.standings[i].table[j].draw,
-              lost: responseJson.standings[i].table[j].lost,
-              points: responseJson.standings[i].table[j].points,
-              goalsFor: responseJson.standings[i].table[j].goalsFor,
-              goalsAgainst: responseJson.standings[i].table[j].goalsAgainst,
-              goalsDiff: responseJson.standings[i].table[j].goalDifference
-            });
-          }
-        }
+      for (var i = 0; i < responseJson.data.length; i++) {
+        teams.push({
+          position: responseJson.data[i].position,
+          id: responseJson.data[i].teamId,
+          name: responseJson.data[i].name,
+          crest: responseJson.data[i].crest,
+          played: responseJson.data[i].played,
+          won: responseJson.data[i].won,
+          draw: responseJson.data[i].draw,
+          lost: responseJson.data[i].lost,
+          points: responseJson.data[i].points,
+          goalsFor: responseJson.data[i].goalsFor,
+          goalsAgainst: responseJson.data[i].goalsAgainst,
+          goalsDiff: responseJson.data[i].goalsDiff
+        });
       }
       this.setState({
         isStandingsLoading: false,
         standingsData: responseJson,
         teams: teams,
-      }, function(){
-
+      }, function () {
       });
-    })
-    .catch((error) =>{
+    }
+    catch (error) {
       console.error(error);
-    });
+    }
   }
 
-  getMatches() {
-    return fetch('http://api.football-data.org/v2/competitions/2014/matches',
-    {
-      headers: {
-        'X-Auth-Token': '2b235ab73c8a4a8b9cbc541da8ab5191'
+  async getMatches() {
+    try {
+      const response = await fetch('https://abacus-api.herokuapp.com/api/matches/');
+      const responseJson = await response.json();
+      var matches = [];
+      for (var i = 0; i < responseJson.data.length; i++) {
+        if (responseJson.data[i].status != 'FINISHED'){
+          matches.push({
+            awayTeamGoals: responseJson.data[i].awayTeamGoals,
+            awayTeamId: responseJson.data[i].awayTeamId,
+            awayTeamName: responseJson.data[i].awayTeamName,
+            homeTeamGoals: responseJson.data[i].homeTeamGoals,
+            homeTeamId: responseJson.data[i].homeTeamId,
+            homeTeamName: responseJson.data[i].homeTeamName,
+            id: responseJson.data[i].id,
+            matchId: responseJson.data[i].matchId,
+            matchday: responseJson.data[i].matchday,
+            status: responseJson.data[i].status,
+            utcDate: responseJson.data[i].utcDate
+          });
+        }
       }
-    })
-    .then((response) => response.json())
-    .then((responseJson) => {
       this.setState({
         isMatchesLoading: false,
         matchesData: responseJson,
-      }, function(){
-
+        matches: matches
+      }, function () {
       });
-    })
-    .catch((error) =>{
+    }
+    catch (error) {
       console.error(error);
-    });
+    }
   }
 
   componentDidMount(){
@@ -107,15 +110,11 @@ class MatchesScreen extends React.Component {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <FlatList
-          data={this.state.matchesData.matches}
+          data={this.state.matches.sort((a, b) => (a.matchday - b.matchday))}
           renderItem={({item}) =>
             <View style={{flexDirection: 'row', alignItems: 'center'}}>
               <Text>
-                {item.homeTeam.name}
-                {item.score.fullTime.homeTeam != null ? (item.score.fullTime.homeTeam) : (<Text>?</Text>)}
-                -
-                {item.score.fullTime.awayTeam != null ? (item.score.fullTime.awayTeam) : (<Text>?</Text>)}
-                {item.awayTeam.name}
+                {item.homeTeamName}{item.homeTeamGoals}{item.awayTeamGoals}{item.awayTeamName}
               </Text>
             </View>
           }
