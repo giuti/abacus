@@ -21,8 +21,11 @@ class MatchesScreen extends React.Component {
     super(props);
     this.state = {
       teams: [],
+      matches: [],
+      gaps: [],
       isMatchesLoading: true,
-      isStandingsLoading: true
+      isStandingsLoading: true,
+      isGapsLoading: true
     }
   }
 
@@ -44,7 +47,8 @@ class MatchesScreen extends React.Component {
           points: responseJson.data[i].points,
           goalsFor: responseJson.data[i].goalsFor,
           goalsAgainst: responseJson.data[i].goalsAgainst,
-          goalsDiff: responseJson.data[i].goalsDiff
+          goalsDiff: responseJson.data[i].goalsDiff,
+          teamsDiff: {}
         });
       }
       this.setState({
@@ -93,9 +97,30 @@ class MatchesScreen extends React.Component {
     }
   }
 
+  async getGaps() {
+    try {
+      const response = await fetch('https://abacus-api.herokuapp.com/api/gaps/');
+      const responseJson = await response.json();
+      var gaps = {};
+      for (var i = 0; i < responseJson.data.length; i++) {
+        gaps[responseJson.data[i].teamId+'_'+responseJson.data[i].awayTeamId] = responseJson.data[i].diff
+      }
+      this.setState({
+        isGapsLoading: false,
+        gapsData: responseJson,
+        gaps: gaps
+      }, function () {
+      });
+    }
+    catch (error) {
+      console.error(error);
+    }
+  }
+
   componentDidMount(){
     this.getStandings();
     this.getMatches();
+    this.getGaps();
   }
 
   render() {
@@ -122,7 +147,7 @@ class MatchesScreen extends React.Component {
         />
         <Button
           title="Calculate"
-          onPress={() => this.props.navigation.navigate('CalculatedTable', {teams: this.state.teams})}
+          onPress={() => this.props.navigation.navigate('CalculatedTable', {teams: this.state.teams, gaps: this.state.gaps})}
         />
       </View>
     );
@@ -134,19 +159,67 @@ class CalculatedTableScreen extends React.Component {
     super(props);
     this.state = {
       teams: this.props.navigation.getParam('teams', []),
+      gaps: this.props.navigation.getParam('gaps', []),
       orderedTeams: []
     }
   }
 
   compare(a, b) {
-    return b.points - a.points
+    return b.points - a.points// || b.goalsFor - a.goalsFor
   }
 
   sortTable() {
-    var teams = this.state.teams
-    var orderedTeams = teams.sort(this.compare)
+    var sortedTeams = []
+    var groupBy = function(xs, key) {
+      return xs.reduce(function(rv, x) {
+        (rv[x[key]] = rv[x[key]] || []).push(x);
+        return rv;
+      }, {});
+    };
+
+    var teams = this.state.teams//.sort(this.compare)
+    var gaps = this.state.gaps
+    var groupedTeams = groupBy(teams, 'points')
+
+    for (var key in groupedTeams) {
+      if (groupedTeams[key].length < 2) {
+        sortedTeams.unshift(groupedTeams[key][0]);
+      } else if (groupedTeams[key].length == 2) {
+        var teamA = groupedTeams[key][0];
+        var teamB = groupedTeams[key][1];
+        var diff = gaps[teamA.id]+'_'+gaps[teamB.id] - gaps[teamB.id]+'_'+gaps[teamA.id];
+        if (diff < 0) {
+          sortedTeams.unshift(teamA);
+          sortedTeams.unshift(teamB);
+        } else if (diff > 0) {
+          sortedTeams.unshift(teamB);
+          sortedTeams.unshift(teamA);
+        } else {
+          var globalDiff = teamA.goalsDiff - teamB.goalsDiff
+          if (globalDiff < 0) {
+            sortedTeams.unshift(teamA);
+            sortedTeams.unshift(teamB);
+          } else if (globalDiff > 0) {
+            sortedTeams.unshift(teamB);
+            sortedTeams.unshift(teamA);
+          } else {
+            var globalFor = teamA.goalsFor - teamB.goalsFor
+            if (globalFor < 0) {
+              sortedTeams.unshift(teamA);
+              sortedTeams.unshift(teamB);
+            } else if (globalFor > 0) {
+              sortedTeams.unshift(teamB);
+              sortedTeams.unshift(teamA);
+            }
+          }
+        }
+      } else if (groupedTeams[key].length > 2) {
+        
+      }
+    }
+
     this.setState({
-      orderedTeams: orderedTeams
+      sortedTeams: sortedTeams
     }, function(){
 
     });
@@ -165,7 +238,7 @@ class CalculatedTableScreen extends React.Component {
           renderItem={({item}) =>
             <View style={{flexDirection: 'row', alignItems: 'center'}}>
               <Text>
-                {item.name}
+                | {item.name} | {item.points} | {item.goalsFor} |
               </Text>
             </View>
           }
