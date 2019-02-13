@@ -225,18 +225,14 @@ class CalculatedTableScreen extends React.Component {
         for (var i=0; i<groupedTeamsLength; i++) {
           for (var j=0; j<groupedTeamsLength; j++) {
             if (i != j) {
-              var gap = gaps[groupTeamsList[i].id+'_'+groupTeamsList[j].id];
-              mapTeams[groupTeamsList[i].id].diff += gap || 0
-              mapTeams[groupTeamsList[j].id].diff -= gap || 0
-              console.log(gap);
+              var gap = gaps[groupTeamsList[i].id+'_'+groupTeamsList[j].id] || 0;
+              mapTeams[groupTeamsList[i].id].diff += gap;
+              mapTeams[groupTeamsList[j].id].diff -= gap;
               if ( gap< 0) {
-                console.log(groupTeamsList[i].name+' lost against '+groupTeamsList[j].name);
                 mapTeams[groupTeamsList[j].id].pts += 3;
               } else if (gap > 0) {
-                console.log(groupTeamsList[i].name+' won against '+groupTeamsList[j].name);
                 mapTeams[groupTeamsList[i].id].pts += 3;
               } else if (gap == 0){
-                console.log(groupTeamsList[i].name+' and '+groupTeamsList[j].name+' draw the match.');
                 mapTeams[groupTeamsList[i].id].pts += 1;
                 mapTeams[groupTeamsList[j].id].pts += 1;
               } else {
@@ -260,7 +256,9 @@ class CalculatedTableScreen extends React.Component {
             return b.group.pts - a.group.pts;
           }
         });
-        console.log(groupTeamsList);
+        for (var v=0; v<groupedTeamsLength; v++) {
+          sortedTeams.unshift(groupedTeams[v]);
+        }
       }
     }
 
