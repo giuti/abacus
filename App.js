@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View, Button, ActivityIndicator, FlatList } from 'react-native';
+import { StyleSheet, Text, View, Button, ActivityIndicator, FlatList, BackHandler } from 'react-native';
 import { createStackNavigator, createAppContainer } from 'react-navigation';
+import RadioForm, {RadioButton, RadioButtonInput, RadioButtonLabel} from 'react-native-simple-radio-button';
 
 class HomeScreen extends React.Component {
   render() {
@@ -25,8 +26,14 @@ class MatchesScreen extends React.Component {
       gaps: [],
       isMatchesLoading: true,
       isStandingsLoading: true,
-      isGapsLoading: true
+      isGapsLoading: true,
     }
+  }
+
+  componentDidMount(){
+    this.getStandings();
+    this.getMatches();
+    this.getGaps();
   }
 
   async getStandings() {
@@ -118,10 +125,41 @@ class MatchesScreen extends React.Component {
     }
   }
 
-  componentDidMount(){
-    this.getStandings();
-    this.getMatches();
-    this.getGaps();
+  selectResult(value, item) {
+    var teams = this.state.teams;
+    var gaps = this.state.gaps;
+
+    for (var i=0; i<teams.length; i++) {
+      if(teams[i].id == item.homeTeamId) {
+        teams[i].teamsDiff[item.id] = 0;
+        if(value == '1') {
+          teams[i].teamsDiff[item.id] += 3;
+          gaps[item.homeTeamId+'_'+item.awayTeamId] = 1;
+        } else if(value == '2') {
+          teams[i].teamsDiff[item.id] += 1;
+          gaps[item.homeTeamId+'_'+item.awayTeamId] = 0;
+        } else if(value == '3') {
+          teams[i].teamsDiff[item.id] += 0;
+          gaps[item.homeTeamId+'_'+item.awayTeamId] = -1;
+        }
+      }
+      if(teams[i].id == item.awayTeamId) {
+        teams[i].teamsDiff[item.id] = 0;
+        if(value == '1') {
+          teams[i].teamsDiff[item.id] += 0;
+        } else if(value == '2') {
+          teams[i].teamsDiff[item.id] += 1;
+        } else if(value == '3') {
+          teams[i].teamsDiff[item.id] += 3;
+        }
+      }
+    }
+    
+    this.setState({
+      teams: teams,
+      gaps: gaps
+    }, function () {
+    });
   }
 
   render() {
@@ -139,16 +177,34 @@ class MatchesScreen extends React.Component {
           data={this.state.matches.sort((a, b) => (a.matchday - b.matchday))}
           renderItem={({item}) =>
             <View style={{flexDirection: 'row', alignItems: 'center'}}>
-              <Text>
-                {item.homeTeamName}{item.homeTeamGoals}{item.awayTeamGoals}{item.awayTeamName}
-              </Text>
+              <Text>{item.homeTeamName}</Text>
+              <RadioForm
+                radio_props={[
+                  {label: '', value: '1'},
+                  {label: '', value: '2'},
+                  {label: '', value: '3'}
+                ]}
+                initial={-1}
+                onPress={(value) => {this.selectResult(value, item)}}
+                formHorizontal={true}
+                labelHorizontal={false}
+                borderWidth={1}
+                buttonSize={10}
+                buttonOuterSize={20}
+                buttonStyle={{}}
+                buttonWrapStyle={{margin: 5}}
+              />
+              <Text>{item.awayTeamName}</Text>
             </View>
           }
           keyExtractor={(item, index) => 'match_'+item.id}
         />
         <Button
           title="Calculate"
-          onPress={() => this.props.navigation.navigate('CalculatedTable', {teams: this.state.teams, gaps: this.state.gaps})}
+          onPress={() => this.props.navigation.navigate('CalculatedTable', {
+            teams: this.state.teams,
+            gaps: this.state.gaps
+          })}
         />
       </View>
     );
@@ -156,12 +212,88 @@ class MatchesScreen extends React.Component {
 }
 
 class CalculatedTableScreen extends React.Component {
+  static navigationOptions = {
+    headerLeft: null
+  };
+
+  _didFocusSubscription;
+  _willBlurSubscription;
+
   constructor(props){
     super(props);
+
+    this._didFocusSubscription = props.navigation.addListener('didFocus', payload =>
+      BackHandler.addEventListener('hardwareBackPress', this.onBackButtonPressAndroid)
+    );
+
     this.state = {
       teams: this.props.navigation.getParam('teams', []),
       gaps: this.props.navigation.getParam('gaps', []),
       orderedTeams: []
+    }
+  }
+
+  componentDidMount(){
+    this._willBlurSubscription = this.props.navigation.addListener('willBlur', payload =>
+      BackHandler.removeEventListener('hardwareBackPress', this.onBackButtonPressAndroid)
+    );
+
+    this.setPoints();
+    this.sortTable();
+  }
+
+  onBackButtonPressAndroid = () => {
+    this.clearPoints();
+  };
+  
+  componentWillUnmount() {
+    this._didFocusSubscription && this._didFocusSubscription.remove();
+    this._willBlurSubscription && this._willBlurSubscription.remove();
+  }
+
+  setPoints() {
+    var teams = this.state.teams
+    for (var i=0; i<teams.length; i++) {
+      var teamsDiffMap = teams[i].teamsDiff
+      for (var key in teamsDiffMap) {
+        var pts = teamsDiffMap[key]
+        teams[i].points += pts;
+        teams[i].played += 1;
+        if(pts == 3) {
+          teams[i].won += 1;
+          teams[i].goalsFor += 1;
+          teams[i].goalsDiff += 1;
+        } else if(pts == 1) {
+          teams[i].draw += 1;
+        } else if(pts == 0) {
+          teams[i].lost +=1 ;
+          teams[i].goalsAgainst += 1;
+          teams[i].goalsDiff -= 1;
+        }
+      }
+    }
+  }
+
+  clearPoints() {
+    var teams = this.state.teams
+    for (var i=0; i<teams.length; i++) {
+      var teamsDiffMap = teams[i].teamsDiff
+      for (var key in teamsDiffMap) {
+        var pts = teamsDiffMap[key]
+        teams[i].points -= pts;
+        teams[i].played -= 1;
+        if(pts == 3) {
+          teams[i].won -= 1;
+          teams[i].goalsFor -= 1;
+          teams[i].goalsDiff -= 1;
+        } else if(pts == 1) {
+          teams[i].draw -= 1;
+        } else if(pts == 0) {
+          teams[i].lost -=1 ;
+          teams[i].goalsAgainst -= 1;
+          teams[i].goalsDiff += 1;
+        }
+      }
     }
   }
 
@@ -181,7 +313,6 @@ class CalculatedTableScreen extends React.Component {
     for (var key in groupedTeams) {
       var groupTeamsList = groupedTeams[key]
       var groupedTeamsLength = groupTeamsList.length
-      console.log(groupTeamsList);
       if (groupedTeamsLength < 2) {
         sortedTeams.unshift(groupTeamsList[0]);
       } else if (groupedTeamsLength == 2) {
@@ -218,47 +349,59 @@ class CalculatedTableScreen extends React.Component {
           }
         }
       } else if (groupedTeamsLength > 2) {
-        var mapTeams = {}
         for (var v=0; v<groupedTeamsLength; v++) {
-          mapTeams[groupTeamsList[v].id] = {'pts': 0, 'diff': 0};
+          groupTeamsList[v].sub = {};
+          groupTeamsList[v].sub.diff = 0;
+          groupTeamsList[v].sub.pts = 0;
         }
         for (var i=0; i<groupedTeamsLength; i++) {
           for (var j=0; j<groupedTeamsLength; j++) {
             if (i != j) {
               var gap = gaps[groupTeamsList[i].id+'_'+groupTeamsList[j].id] || 0;
-              mapTeams[groupTeamsList[i].id].diff += gap;
-              mapTeams[groupTeamsList[j].id].diff -= gap;
-              if ( gap< 0) {
-                mapTeams[groupTeamsList[j].id].pts += 3;
+              groupTeamsList[i].sub['diff'] += gap;
+              groupTeamsList[j].sub['diff'] -= gap;
+              if ( gap < 0) {
+                groupTeamsList[j].sub['pts'] += 3;
               } else if (gap > 0) {
-                mapTeams[groupTeamsList[i].id].pts += 3;
+                groupTeamsList[i].sub['pts'] += 3;
               } else if (gap == 0){
-                mapTeams[groupTeamsList[i].id].pts += 1;
-                mapTeams[groupTeamsList[j].id].pts += 1;
+                groupTeamsList[i].sub['pts'] += 1;
+                groupTeamsList[j].sub['pts'] += 1;
               } else {
-                console.log(groupTeamsList[i].name+' vs '+groupTeamsList[j].name+' - Not played yet.');
+                // - Not played yet. -
               }
             }
           }
         }
-        groupedTeams.sort(function(a, b){
-          if (a.group.pts == b.group.pts) {
-            if (a.group.diff == b.group.diff) {
+        groupTeamsList.sort(function(a, b){
+          if (a.sub.pts == b.sub.pts) {
+            console.log('A');
+            if (a.sub.diff == b.sub.diff) {
+              console.log('B');
               if (a.goalsDiff == b.goalsDiff) {
+                console.log('C');
                 b.goalsFor - a.goalsFor
               } else {
+                console.log('D');
                 b.goalsDiff - a.goalsDiff
               }
             } else {
-              return b.group.diff - a.group.diff
+              console.log('X');
+              return b.sub.diff - a.sub.diff
             }
           } else {
-            return b.group.pts - a.group.pts;
+            console.log('Y');
+            return b.sub.pts - a.sub.pts;
           }
         });
-        for (var v=0; v<groupedTeamsLength; v++) {
-          sortedTeams.unshift(groupedTeams[v]);
+        console.log('____');
+        console.log(groupTeamsList);
+        
+        for (var v=0; v<groupTeamsList.length; v++) {
+          sortedTeams.unshift(groupTeamsList[v]);
         }
+        console.log('____');
+        console.log(sortedTeams);
       }
     }
 
@@ -269,20 +412,16 @@ class CalculatedTableScreen extends React.Component {
     });
   }
 
-  componentDidMount(){
-    this.sortTable();
-  }
-
   render() {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <Text>Calculated Table Screen</Text>
         <FlatList
           data={this.state.sortedTeams}
-          renderItem={({item}) =>
+          renderItem={({item, index}) =>
             <View style={{flexDirection: 'row', alignItems: 'center'}}>
               <Text>
-                | {item.name} | {item.points} | {item.goalsFor} |
+                | {item.name} | {item.points} | {item.position} -> {index+1}
               </Text>
             </View>
           }
