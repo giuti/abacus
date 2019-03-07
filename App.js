@@ -1,33 +1,37 @@
 import React from 'react';
-import { StyleSheet, Text, View, Button, ActivityIndicator, FlatList, BackHandler } from 'react-native';
+import { StyleSheet, Text, View, Button, ActivityIndicator, FlatList, BackHandler, Image } from 'react-native';
 import { createStackNavigator, createAppContainer } from 'react-navigation';
 import RadioForm, {RadioButton, RadioButtonInput, RadioButtonLabel} from 'react-native-simple-radio-button';
+// import SVGImage from 'react-native-svg-image';
+
+// class HomeScreen extends React.Component {
+//   render() {
+//     return (
+//       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+//         <Text>Home Screen</Text>
+//         <Button
+//           title="Go to Matches"
+//           onPress={() => this.props.navigation.navigate('Matches')}
+//         />
+//       </View>
+//     );
+//   }
+// }
 
 class HomeScreen extends React.Component {
-  render() {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <Text>Home Screen</Text>
-        <Button
-          title="Go to Matches"
-          onPress={() => this.props.navigation.navigate('Matches')}
-        />
-      </View>
-    );
-  }
-}
-
-class MatchesScreen extends React.Component {
   constructor(props){
     super(props);
     this.state = {
       teams: [],
       matches: [],
       gaps: [],
+      // teamImages: [],
       isMatchesLoading: true,
       isStandingsLoading: true,
       isGapsLoading: true,
+      // isImagesLoading: true
     }
+    //this.getTeamImages();
   }
 
   componentDidMount(){
@@ -61,7 +65,7 @@ class MatchesScreen extends React.Component {
       }
       this.setState({
         isStandingsLoading: false,
-        standingsData: responseJson,
+        // standingsData: responseJson,
         teams: teams,
       }, function () {
       });
@@ -78,6 +82,23 @@ class MatchesScreen extends React.Component {
       var matches = [];
       for (var i = 0; i < responseJson.data.length; i++) {
         if (responseJson.data[i].status != 'FINISHED'){
+          // var homeCrest = responseJson.data[i].homeCrest
+          // var awayCrest = responseJson.data[i].AwayCrest
+          // var defaultCrest = 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/default-team-logo-500.png'
+          // try {
+          //   const homeImageResp = await fetch(homeCrest);
+          //   if (homeImageResp.status === 404) {
+          //     homeCrest = defaultCrest;
+          //   }
+          //   const awayImageResp = await fetch(awayCrest);
+          //   if (awayImageResp.status === 404) {
+          //     awayCrest = defaultCrest;
+          //   }
+          //   Image.prefetch(homeCrest);
+          //   Image.prefetch(awayCrest);
+          // } catch (error) {
+          //   console.log(error);
+          // }
           matches.push({
             awayTeamGoals: responseJson.data[i].awayTeamGoals,
             awayTeamId: responseJson.data[i].awayTeamId,
@@ -90,12 +111,14 @@ class MatchesScreen extends React.Component {
             matchday: responseJson.data[i].matchday,
             status: responseJson.data[i].status,
             utcDate: responseJson.data[i].utcDate
+            //homeCrest: homeCrest,
+            //awayCrest: awayCrest
           });
         }
       }
       this.setState({
         isMatchesLoading: false,
-        matchesData: responseJson,
+        // matchesData: responseJson,
         matches: matches
       }, function () {
       });
@@ -115,7 +138,7 @@ class MatchesScreen extends React.Component {
       }
       this.setState({
         isGapsLoading: false,
-        gapsData: responseJson,
+        // gapsData: responseJson,
         gaps: gaps
       }, function () {
       });
@@ -172,12 +195,16 @@ class MatchesScreen extends React.Component {
     }
 
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ flex: 1}}>
         <FlatList
           data={this.state.matches.sort((a, b) => (a.matchday - b.matchday))}
           renderItem={({item}) =>
-            <View style={{flexDirection: 'row', alignItems: 'center'}}>
-              <Text>{item.homeTeamName}</Text>
+            <View style={styles.match_container}>
+              <View style={styles.container_team_left}>
+                <Text style={styles.match_title_left}>{item.homeTeamName}</Text>
+                <Image source={require('./assets/default.png')} style={styles.photo}/>
+              </View>
+              {/* <View style={styles.match_photo}><SVGImage source={require('./assets/default.png')}/></View> */}
               <RadioForm
                 radio_props={[
                   {label: '', value: '1'},
@@ -189,12 +216,15 @@ class MatchesScreen extends React.Component {
                 formHorizontal={true}
                 labelHorizontal={false}
                 borderWidth={1}
-                buttonSize={10}
-                buttonOuterSize={20}
+                buttonSize={25}
+                buttonOuterSize={35}
                 buttonStyle={{}}
-                buttonWrapStyle={{margin: 5}}
+                buttonWrapStyle={{margin: 4}}
               />
-              <Text>{item.awayTeamName}</Text>
+              <View style={styles.container_team_right}>
+                <Image source={require('./assets/default.png')} style={styles.photo}/>
+                <Text  style={styles.match_title_right}>{item.awayTeamName}</Text>
+              </View>
             </View>
           }
           keyExtractor={(item, index) => 'match_'+item.id}
@@ -375,33 +405,23 @@ class CalculatedTableScreen extends React.Component {
         }
         groupTeamsList.sort(function(a, b){
           if (a.sub.pts == b.sub.pts) {
-            console.log('A');
             if (a.sub.diff == b.sub.diff) {
-              console.log('B');
               if (a.goalsDiff == b.goalsDiff) {
-                console.log('C');
                 b.goalsFor - a.goalsFor
               } else {
-                console.log('D');
                 b.goalsDiff - a.goalsDiff
               }
             } else {
-              console.log('X');
               return b.sub.diff - a.sub.diff
             }
           } else {
-            console.log('Y');
             return b.sub.pts - a.sub.pts;
           }
         });
-        console.log('____');
-        console.log(groupTeamsList);
         
         for (var v=0; v<groupTeamsList.length; v++) {
           sortedTeams.unshift(groupTeamsList[v]);
         }
-        console.log('____');
-        console.log(sortedTeams);
       }
     }
 
@@ -414,16 +434,18 @@ class CalculatedTableScreen extends React.Component {
 
   render() {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <Text>Calculated Table Screen</Text>
+      <View style={{ flex: 1}}>
         <FlatList
           data={this.state.sortedTeams}
           renderItem={({item, index}) =>
-            <View style={{flexDirection: 'row', alignItems: 'center'}}>
-              <Text>
-                | {item.name} | {item.points} | {item.position} -> {index+1}
-              </Text>
-            </View>
+            <CustomRow
+              standing={index+1}
+              name={item.name}
+              points={item.points}
+              crest={item.crest}
+              played={item.played}
+              shift={item.position-(index+1)}
+            />
           }
           keyExtractor={(item, index) => 'team_'+item.id}
         />
@@ -432,24 +454,114 @@ class CalculatedTableScreen extends React.Component {
   }
 }
 
+const CustomRow = ({ standing, name, points, crest, played, shift }) => (
+  <View style={styles.container}>
+    <Text style={styles.standing}>{standing}</Text>
+    <Image source={require('./assets/default.png')} style={styles.photo}/>
+    <Text style={styles.title}>{name}</Text>
+    <View style={styles.container_text}>
+        <Text style={styles.info}>Points: {points}</Text>
+        <Text style={styles.info}>Played: {played}</Text>
+        <Text style={styles.info}>Shift: {shift}</Text>
+    </View>
+    {shift<0 ? <Text style={styles.shift}>-</Text> : (shift>0 ? <Text style={styles.shift}>+</Text> : <Text style={styles.shift}>=</Text>)}
+  </View>
+);
+
 const RootStack = createStackNavigator(
   {
     Home: HomeScreen,
-    Matches: MatchesScreen,
+    // Matches: MatchesScreen,
     CalculatedTable: CalculatedTableScreen,
   },
   {
-    initialRouteName: 'Home',
+    initialRouteName: 'Home'
+    // headerMode: 'none',
+    // navigationOptions: {
+    //     headerVisible: false,
+    // }
   }
 );
 
 export default createAppContainer(RootStack);
 
 const styles = StyleSheet.create({
+  match_container: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingTop: 5,
+    marginLeft:5,
+    marginRight:5,
+    marginTop: 4,
+    marginBottom: 4,
+    borderRadius: 5,
+    backgroundColor: '#FFF',
+    elevation: 2,
+  },
+  container_team_left: {
+    flex: 1,
+    flexDirection: 'row',
+    marginRight: 10,
+  },
+  container_team_right: {
+    flex: 1,
+    flexDirection: 'row',
+    marginLeft: 10,
+  },
+  match_title_left: {
+    fontSize: 8,
+    color: '#000',
+    width: 50,
+    textAlign: 'right',
+    padding: 8,
+  },
+  match_title_right: {
+    fontSize: 8,
+    color: '#000',
+    width: 50,
+    textAlign: 'left',
+    padding: 8,
+  },
+  match_photo: {
+    height: 50,
+    // width: 50,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: 'row',
+    padding: 10,
+    marginLeft:16,
+    marginRight:16,
+    marginTop: 4,
+    marginBottom: 4,
+    borderRadius: 5,
+    backgroundColor: '#FFF',
+    elevation: 2,
+    backgroundColor: 'powderblue',
+  },
+  standing: {
+    fontSize: 16,
+  },
+  photo: {
+    height: 50,
+    width: 50,
+  },
+  title: {
+    fontSize: 16,
+    color: '#000',
+    width: 100,
+  },
+  container_text: {
+    flex: 1,
+    flexDirection: 'column',
+    marginLeft: 12,
+  },
+  info: {
+    marginLeft:16,
+    fontSize: 16,
+    fontStyle: 'italic',
+  },
+  shift: {
+    fontSize: 16,
   },
 });
