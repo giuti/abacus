@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View, Button, ActivityIndicator, FlatList, BackHandler, Image } from 'react-native';
 import { createStackNavigator, createAppContainer } from 'react-navigation';
 import RadioForm, {RadioButton, RadioButtonInput, RadioButtonLabel} from 'react-native-simple-radio-button';
-// import SVGImage from 'react-native-svg-image';
+import SVGImage from 'react-native-svg-image';
 
 // class HomeScreen extends React.Component {
 //   render() {
@@ -19,6 +19,17 @@ import RadioForm, {RadioButton, RadioButtonInput, RadioButtonLabel} from 'react-
 // }
 
 class HomeScreen extends React.Component {
+  static navigationOptions = {
+    title: 'Partidos',
+    headerStyle: {
+      backgroundColor: '#0066ff',
+    },
+    headerTintColor: 'white',
+    headerTitleStyle: {
+      fontWeight: 'bold',
+    },
+  };
+
   constructor(props){
     super(props);
     this.state = {
@@ -82,23 +93,23 @@ class HomeScreen extends React.Component {
       var matches = [];
       for (var i = 0; i < responseJson.data.length; i++) {
         if (responseJson.data[i].status != 'FINISHED'){
-          // var homeCrest = responseJson.data[i].homeCrest
-          // var awayCrest = responseJson.data[i].AwayCrest
-          // var defaultCrest = 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/default-team-logo-500.png'
-          // try {
-          //   const homeImageResp = await fetch(homeCrest);
-          //   if (homeImageResp.status === 404) {
-          //     homeCrest = defaultCrest;
-          //   }
-          //   const awayImageResp = await fetch(awayCrest);
-          //   if (awayImageResp.status === 404) {
-          //     awayCrest = defaultCrest;
-          //   }
-          //   Image.prefetch(homeCrest);
-          //   Image.prefetch(awayCrest);
-          // } catch (error) {
-          //   console.log(error);
-          // }
+          var homeCrest = responseJson.data[i].homeCrest;
+          var awayCrest = responseJson.data[i].awayCrest;
+          var defaultCrest = 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/default-team-logo-500.png';
+          try {
+            const homeImageResp = await fetch(homeCrest);
+            if (homeImageResp.status === 404) {
+              homeCrest = defaultCrest;
+            }
+            const awayImageResp = await fetch(awayCrest);
+            if (awayImageResp.status === 404) {
+              awayCrest = defaultCrest;
+            }
+            Image.prefetch(homeCrest);
+            Image.prefetch(awayCrest);
+          } catch (error) {
+            console.log(error);
+          }
           matches.push({
             awayTeamGoals: responseJson.data[i].awayTeamGoals,
             awayTeamId: responseJson.data[i].awayTeamId,
@@ -110,9 +121,9 @@ class HomeScreen extends React.Component {
             matchId: responseJson.data[i].matchId,
             matchday: responseJson.data[i].matchday,
             status: responseJson.data[i].status,
-            utcDate: responseJson.data[i].utcDate
-            //homeCrest: homeCrest,
-            //awayCrest: awayCrest
+            utcDate: responseJson.data[i].utcDate,
+            homeCrest: homeCrest,
+            awayCrest: awayCrest
           });
         }
       }
@@ -188,8 +199,8 @@ class HomeScreen extends React.Component {
   render() {
     if(this.state.isMatchesLoading || this.state.isStandingsLoading){
       return(
-        <View style={{flex: 1, padding: 20}}>
-          <ActivityIndicator/>
+        <View style={styles.activity_indicator}>
+          <ActivityIndicator size={'large'}/>
         </View>
       )
     }
@@ -202,9 +213,8 @@ class HomeScreen extends React.Component {
             <View style={styles.match_container}>
               <View style={styles.container_team_left}>
                 <Text style={styles.match_title_left}>{item.homeTeamName}</Text>
-                <Image source={require('./assets/default.png')} style={styles.photo}/>
+                <SVGImage source={{uri: item.homeCrest}} style={styles.photo} scalesPageToFit={true}/>
               </View>
-              {/* <View style={styles.match_photo}><SVGImage source={require('./assets/default.png')}/></View> */}
               <RadioForm
                 radio_props={[
                   {label: '', value: '1'},
@@ -222,15 +232,15 @@ class HomeScreen extends React.Component {
                 buttonWrapStyle={{margin: 4}}
               />
               <View style={styles.container_team_right}>
-                <Image source={require('./assets/default.png')} style={styles.photo}/>
-                <Text  style={styles.match_title_right}>{item.awayTeamName}</Text>
+                <SVGImage source={{uri: item.awayCrest}} style={styles.photo} scalesPageToFit={true}/>
+                <Text style={styles.match_title_right}>{item.awayTeamName}</Text>
               </View>
             </View>
           }
           keyExtractor={(item, index) => 'match_'+item.id}
         />
         <Button
-          title="Calculate"
+          title="Calcular"
           onPress={() => this.props.navigation.navigate('CalculatedTable', {
             teams: this.state.teams,
             gaps: this.state.gaps
@@ -243,6 +253,14 @@ class HomeScreen extends React.Component {
 
 class CalculatedTableScreen extends React.Component {
   static navigationOptions = {
+    title: 'Clasificación',
+    headerStyle: {
+      backgroundColor: '#0066ff',
+    },
+    headerTintColor: 'white',
+    headerTitleStyle: {
+      fontWeight: 'bold',
+    },
     headerLeft: null
   };
 
@@ -434,21 +452,30 @@ class CalculatedTableScreen extends React.Component {
 
   render() {
     return (
-      <View style={{ flex: 1}}>
-        <FlatList
-          data={this.state.sortedTeams}
-          renderItem={({item, index}) =>
-            <CustomRow
-              standing={index+1}
-              name={item.name}
-              points={item.points}
-              crest={item.crest}
-              played={item.played}
-              shift={item.position-(index+1)}
-            />
-          }
-          keyExtractor={(item, index) => 'team_'+item.id}
-        />
+      <View style={styles.table_view}>
+        <View style={styles.table_head}>
+          <Text style={styles.standing_head}>#</Text>
+          <Text style={styles.title_head}>Equipo</Text>
+          <Text style={styles.info_head}>PJ</Text>
+          <Text style={styles.info_head}>PTS</Text>
+          <Text style={styles.info_head}>DIFF</Text>
+        </View>
+        <View style={styles.table_body}>
+          <FlatList
+            data={this.state.sortedTeams}
+            renderItem={({item, index}) =>
+              <CustomRow
+                standing={index+1}
+                name={item.name}
+                points={item.points}
+                crest={item.crest}
+                played={item.played}
+                shift={item.position-(index+1)}
+              />
+            }
+            keyExtractor={(item, index) => 'team_'+item.id}
+          />
+        </View>
       </View>
     );
   }
@@ -456,15 +483,19 @@ class CalculatedTableScreen extends React.Component {
 
 const CustomRow = ({ standing, name, points, crest, played, shift }) => (
   <View style={styles.container}>
-    <Text style={styles.standing}>{standing}</Text>
-    <Image source={require('./assets/default.png')} style={styles.photo}/>
+    {
+      (standing==1 || standing==2 || standing==3 || standing==4) ? <Text style={styles.standing1}>{standing}</Text>
+      :
+        (standing==5) ? <Text style={styles.standing2}>{standing}</Text>
+        : (standing==6) ? <Text style={styles.standing3}>{standing}</Text>
+          : (standing==18 || standing==19 || standing==20) ? <Text style={styles.standing4}>{standing}</Text>
+            : <Text style={styles.standing}>{standing}</Text>
+    }
+    <SVGImage source={{uri: crest}} style={styles.photo} scalesPageToFit={true}/>
     <Text style={styles.title}>{name}</Text>
-    <View style={styles.container_text}>
-        <Text style={styles.info}>Points: {points}</Text>
-        <Text style={styles.info}>Played: {played}</Text>
-        <Text style={styles.info}>Shift: {shift}</Text>
-    </View>
-    {shift<0 ? <Text style={styles.shift}>-</Text> : (shift>0 ? <Text style={styles.shift}>+</Text> : <Text style={styles.shift}>=</Text>)}
+    <Text style={styles.info}>{played}</Text>
+    <Text style={styles.infoPts}>{points}</Text>
+    {shift<0 ? <Text style={styles.shiftDown}>-</Text> : (shift>0 ? <Text style={styles.shiftUp}>+</Text> : <Text style={styles.shiftEqual}>=</Text>)}
   </View>
 );
 
@@ -495,8 +526,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 4,
     borderRadius: 5,
-    backgroundColor: '#FFF',
     elevation: 2,
+  },
+  activity_indicator: {
+    flex: 1,
+    padding: 200
   },
   container_team_left: {
     flex: 1,
@@ -509,59 +543,206 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   match_title_left: {
-    fontSize: 8,
+    fontSize: 10,
     color: '#000',
     width: 50,
     textAlign: 'right',
-    padding: 8,
+    padding: 5,
   },
   match_title_right: {
-    fontSize: 8,
+    fontSize: 10,
     color: '#000',
     width: 50,
     textAlign: 'left',
-    padding: 8,
+    padding: 5,
   },
   match_photo: {
     height: 50,
-    // width: 50,
+  },
+  table_view: {
+    flex: 1,
+    borderRadius: 5,
+    elevation: 2,
+    padding: 10,
+    marginLeft:10,
+    marginRight:10,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  table_head: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#e6e6e6',
+    // borderColor: 'grey',
+    // borderWidth: 1,
+    borderRadius: 5,
+    margin: 5,
+    paddingTop: 20,
+  },
+  standing_head: {
+    fontSize: 13,
+    color: '#000',
+    textAlign: 'left',
+    textAlign: 'center',
+    width: 35,
+  },
+  title_head: {
+    fontSize: 15,
+    color: '#000',
+    textAlign: 'left',
+    textAlign: 'center',
+    width: 150,
+    paddingRight: 50,
+  },
+  info_head: {
+    fontSize: 11,
+    color: '#000',
+    textAlign: 'left',
+    textAlign: 'center',
+    width: 35,
+  },
+  table_body: {
+    flex: 11,
   },
   container: {
     flex: 1,
     flexDirection: 'row',
-    padding: 10,
-    marginLeft:16,
-    marginRight:16,
-    marginTop: 4,
-    marginBottom: 4,
-    borderRadius: 5,
+    marginLeft:5,
+    marginRight:5,
     backgroundColor: '#FFF',
-    elevation: 2,
-    backgroundColor: 'powderblue',
+    borderBottomColor: 'black',
+    borderBottomWidth: 1,
   },
   standing: {
     fontSize: 16,
+    borderColor: 'black',
+    borderWidth: 1,
+    textAlign: 'center',
+    borderRadius: 5,
+    padding: 8,
+    margin: 8,
+    elevation: 2,
+    height: 35,
+    width: 35,
+  },
+  standing1: {
+    fontSize: 16,
+    backgroundColor: '#003399',
+    color: 'white',
+    borderColor: 'black',
+    borderWidth: 1,
+    textAlign: 'center',
+    borderRadius: 5,
+    padding: 8,
+    margin: 8,
+    elevation: 2,
+    height: 35,
+    width: 35,
+  },
+  standing2: {
+    fontSize: 16,
+    backgroundColor: '#660033',
+    color: 'white',
+    borderColor: 'black',
+    borderWidth: 1,
+    textAlign: 'center',
+    borderRadius: 5,
+    padding: 8,
+    margin: 8,
+    elevation: 2,
+    height: 35,
+    width: 35,
+  },
+  standing3: {
+    fontSize: 16,
+    backgroundColor: '#FF33cc',
+    color: 'white',
+    borderColor: 'black',
+    borderWidth: 1,
+    textAlign: 'center',
+    borderRadius: 5,
+    padding: 8,
+    margin: 8,
+    elevation: 2,
+    height: 35,
+    width: 35,
+  },
+  standing4: {
+    fontSize: 16,
+    backgroundColor: '#CC0000',
+    color: 'white',
+    borderColor: 'black',
+    borderWidth: 1,
+    textAlign: 'center',
+    borderRadius: 5,
+    padding: 8,
+    margin: 8,
+    elevation: 2,
+    height: 35,
+    width: 35,
   },
   photo: {
-    height: 50,
     width: 50,
+    borderRadius: 5,
   },
   title: {
     fontSize: 16,
     color: '#000',
     width: 100,
-  },
-  container_text: {
-    flex: 1,
-    flexDirection: 'column',
-    marginLeft: 12,
+    textAlign: 'left',
+    padding: 8,
   },
   info: {
-    marginLeft:16,
-    fontSize: 16,
+    fontSize: 13,
     fontStyle: 'italic',
+    textAlign: 'center',
+    padding: 8,
+    width: 30,
   },
-  shift: {
+  infoPts: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    padding: 8,
+    width: 30,
+  },
+  shiftUp: {
     fontSize: 16,
+    backgroundColor: '#99FF66',
+    borderColor: 'black',
+    borderWidth: 1,
+    textAlign: 'center',
+    borderRadius: 5,
+    padding: 8,
+    margin: 8,
+    elevation: 2,
+    height: 35,
+    width: 35,
+  },
+  shiftDown: {
+    fontSize: 16,
+    backgroundColor: '#FF5050',
+    borderColor: 'black',
+    borderWidth: 1,
+    textAlign: 'center',
+    borderRadius: 5,
+    padding: 8,
+    margin: 8,
+    elevation: 2,
+    height: 35,
+    width: 35,
+  },
+  shiftEqual: {
+    fontSize: 16,
+    backgroundColor: '#FFF',
+    borderColor: 'black',
+    borderWidth: 1,
+    textAlign: 'center',
+    borderRadius: 5,
+    padding: 8,
+    margin: 8,
+    elevation: 2,
+    height: 35,
+    width: 35,
   },
 });
