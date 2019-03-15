@@ -4,25 +4,11 @@ import { createStackNavigator, createAppContainer } from 'react-navigation';
 import RadioForm, {RadioButton, RadioButtonInput, RadioButtonLabel} from 'react-native-simple-radio-button';
 import SVGImage from 'react-native-svg-image';
 
-// class HomeScreen extends React.Component {
-//   render() {
-//     return (
-//       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-//         <Text>Home Screen</Text>
-//         <Button
-//           title="Go to Matches"
-//           onPress={() => this.props.navigation.navigate('Matches')}
-//         />
-//       </View>
-//     );
-//   }
-// }
-
 class HomeScreen extends React.Component {
   static navigationOptions = {
     title: 'Partidos',
     headerStyle: {
-      backgroundColor: '#0066ff',
+      backgroundColor: 'dodgerblue',
     },
     headerTintColor: 'white',
     headerTitleStyle: {
@@ -36,13 +22,10 @@ class HomeScreen extends React.Component {
       teams: [],
       matches: [],
       gaps: [],
-      // teamImages: [],
       isMatchesLoading: true,
       isStandingsLoading: true,
       isGapsLoading: true,
-      // isImagesLoading: true
     }
-    //this.getTeamImages();
   }
 
   componentDidMount(){
@@ -57,12 +40,23 @@ class HomeScreen extends React.Component {
       const responseJson = await response.json();
       var teams = [];
       for (var i = 0; i < responseJson.data.length; i++) {
+        var crest = responseJson.data[i].crest;
+        var defaultCrest = 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/default-team-logo-500.png';
+        try {
+          const imageResp = await fetch(crest);
+          if (imageResp.status === 404) {
+            crest = defaultCrest;
+          }
+          Image.prefetch(crest);
+        } catch (error) {
+          console.log(error);
+        }
         teams.push({
           id: responseJson.data[i].id,
           position: responseJson.data[i].position,
           teamId: responseJson.data[i].teamId,
           name: responseJson.data[i].name,
-          crest: responseJson.data[i].crest,
+          crest: crest,
           played: responseJson.data[i].played,
           won: responseJson.data[i].won,
           draw: responseJson.data[i].draw,
@@ -76,7 +70,6 @@ class HomeScreen extends React.Component {
       }
       this.setState({
         isStandingsLoading: false,
-        // standingsData: responseJson,
         teams: teams,
       }, function () {
       });
@@ -129,7 +122,6 @@ class HomeScreen extends React.Component {
       }
       this.setState({
         isMatchesLoading: false,
-        // matchesData: responseJson,
         matches: matches
       }, function () {
       });
@@ -149,7 +141,6 @@ class HomeScreen extends React.Component {
       }
       this.setState({
         isGapsLoading: false,
-        // gapsData: responseJson,
         gaps: gaps
       }, function () {
       });
@@ -207,45 +198,49 @@ class HomeScreen extends React.Component {
 
     return (
       <View style={{ flex: 1}}>
-        <FlatList
-          data={this.state.matches.sort((a, b) => (a.matchday - b.matchday))}
-          renderItem={({item}) =>
-            <View style={styles.match_container}>
-              <View style={styles.container_team_left}>
-                <Text style={styles.match_title_left}>{item.homeTeamName}</Text>
-                <SVGImage source={{uri: item.homeCrest}} style={styles.photo} scalesPageToFit={true}/>
+        <View style={{ flex: 10}}>
+          <FlatList
+            data={this.state.matches.sort((a, b) => (a.matchday - b.matchday))}
+            renderItem={({item}) =>
+              <View style={styles.match_container}>
+                <View style={styles.container_team_left}>
+                  <Text style={styles.match_title_left}>{item.homeTeamName}</Text>
+                  <SVGImage source={{uri: item.homeCrest}} style={styles.photo} scalesPageToFit={true}/>
+                </View>
+                <RadioForm
+                  radio_props={[
+                    {label: '1', value: '1'},
+                    {label: 'X', value: '2'},
+                    {label: '2', value: '3'}
+                  ]}
+                  initial={-1}
+                  onPress={(value) => {this.selectResult(value, item)}}
+                  formHorizontal={true}
+                  labelHorizontal={false}
+                  borderWidth={1}
+                  buttonSize={25}
+                  buttonOuterSize={35}
+                  buttonStyle={{}}
+                  buttonWrapStyle={{margin: 4}}
+                />
+                <View style={styles.container_team_right}>
+                  <SVGImage source={{uri: item.awayCrest}} style={styles.photo} scalesPageToFit={true}/>
+                  <Text style={styles.match_title_right}>{item.awayTeamName}</Text>
+                </View>
               </View>
-              <RadioForm
-                radio_props={[
-                  {label: '', value: '1'},
-                  {label: '', value: '2'},
-                  {label: '', value: '3'}
-                ]}
-                initial={-1}
-                onPress={(value) => {this.selectResult(value, item)}}
-                formHorizontal={true}
-                labelHorizontal={false}
-                borderWidth={1}
-                buttonSize={25}
-                buttonOuterSize={35}
-                buttonStyle={{}}
-                buttonWrapStyle={{margin: 4}}
-              />
-              <View style={styles.container_team_right}>
-                <SVGImage source={{uri: item.awayCrest}} style={styles.photo} scalesPageToFit={true}/>
-                <Text style={styles.match_title_right}>{item.awayTeamName}</Text>
-              </View>
-            </View>
-          }
-          keyExtractor={(item, index) => 'match_'+item.id}
-        />
-        <Button
-          title="Calcular"
-          onPress={() => this.props.navigation.navigate('CalculatedTable', {
-            teams: this.state.teams,
-            gaps: this.state.gaps
-          })}
-        />
+            }
+            keyExtractor={(item, index) => 'match_'+item.id}
+          />
+        </View>
+        <View style={{ flex: 1, backgroundColor: 'dodgerblue', paddingTop: 15}}>
+          <Button
+            title="Calcular"
+            onPress={() => this.props.navigation.navigate('CalculatedTable', {
+              teams: this.state.teams,
+              gaps: this.state.gaps
+            })}
+          />
+        </View>
       </View>
     );
   }
@@ -255,7 +250,7 @@ class CalculatedTableScreen extends React.Component {
   static navigationOptions = {
     title: 'Clasificación',
     headerStyle: {
-      backgroundColor: '#0066ff',
+      backgroundColor: 'dodgerblue',
     },
     headerTintColor: 'white',
     headerTitleStyle: {
@@ -390,7 +385,6 @@ class CalculatedTableScreen extends React.Component {
               sortedTeams.unshift(teamB);
               sortedTeams.unshift(teamA);
             } else {
-              // Default sorting
               sortedTeams.unshift(teamA);
               sortedTeams.unshift(teamB);
             }
@@ -502,15 +496,10 @@ const CustomRow = ({ standing, name, points, crest, played, shift }) => (
 const RootStack = createStackNavigator(
   {
     Home: HomeScreen,
-    // Matches: MatchesScreen,
     CalculatedTable: CalculatedTableScreen,
   },
   {
     initialRouteName: 'Home'
-    // headerMode: 'none',
-    // navigationOptions: {
-    //     headerVisible: false,
-    // }
   }
 );
 
@@ -573,8 +562,6 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     backgroundColor: '#e6e6e6',
-    // borderColor: 'grey',
-    // borderWidth: 1,
     borderRadius: 5,
     margin: 5,
     paddingTop: 20,
