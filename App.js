@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, Button, ActivityIndicator, FlatList, BackHandler, Image } from 'react-native';
+import { StyleSheet, Text, View, Button, ActivityIndicator, FlatList, BackHandler, Image, ImageBackground } from 'react-native';
 import { createStackNavigator, createAppContainer } from 'react-navigation';
 import RadioForm, {RadioButton, RadioButtonInput, RadioButtonLabel} from 'react-native-simple-radio-button';
 import SVGImage from 'react-native-svg-image';
@@ -190,9 +190,11 @@ class HomeScreen extends React.Component {
   render() {
     if(this.state.isMatchesLoading || this.state.isStandingsLoading){
       return(
-        <View style={styles.activity_indicator}>
-          <ActivityIndicator size={'large'}/>
-        </View>
+        <ImageBackground source={require('./assets/splash.png')} style={styles.backgroundImage}>
+          <View style={styles.activity_indicator}>
+            <ActivityIndicator size={'large'}/>
+          </View>
+        </ImageBackground>
       )
     }
 
@@ -517,9 +519,13 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     elevation: 2,
   },
+  backgroundImage: {
+    width: '100%',
+    height: '100%',
+  },
   activity_indicator: {
     flex: 1,
-    padding: 200
+    paddingTop: 100
   },
   container_team_left: {
     flex: 1,
